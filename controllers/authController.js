@@ -34,8 +34,6 @@ export const signup = async (req, res) => {
         id: newUser._id,
         role: newUser.role,
         email: newUser.email,
-        name: newUser.name,
-        avatar: newUser.avatar,
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
@@ -77,8 +75,6 @@ export const login = async (req, res) => {
         id: user._id,
         role: user.role,
         email: user.email,
-        name: user.name,
-        avatar: user.avatar,
       },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
@@ -99,15 +95,39 @@ export const login = async (req, res) => {
   }
 };
 
-export const loginuser = (req, res) => {
+export const loginuser = async (req, res) => {
   try {
     const token = req.cookies.token;
-    if (!token) return res.status(200).json({ currentUser: null });
+    if (!token) {
+      return res.status(200).json({ currentUser: null });
+    }
 
+    // Validate token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ currentUser: decoded }); // { id, role, name, email }
+
+    // Now get user from DB USING ID from token
+    const user = await User.findById(decoded.id).select(
+      "name email role status avatar"
+    );
+
+    // If user not found (deleted or banned)
+    if (!user) {
+      return res.status(200).json({ currentUser: null });
+    }
+
+    // Valid user → send DB data (not token data)
+    return res.status(200).json({
+      currentUser: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        avatar: user.avatar,
+      },
+    });
   } catch (error) {
-    res.status(200).json({ currentUser: null }); // Invalid token treated as logged out
+    return res.status(200).json({ currentUser: null });
   }
 };
 
