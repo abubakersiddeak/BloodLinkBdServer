@@ -6,6 +6,7 @@ import morgan from "morgan";
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import bloodDonation from "./routes/bloodDonationRoute.js";
 dotenv.config();
 const PORT = process.env.PORT || 4000;
 connectDB();
@@ -19,6 +20,7 @@ app.use(morgan("dev"));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/bloodDonationReq", bloodDonation);
 app.get("/", (req, res) => {
   res.send("Hello World");
 });

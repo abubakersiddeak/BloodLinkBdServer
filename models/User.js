@@ -43,14 +43,3 @@ const userSchema = new mongoose.Schema(
 );
 
 export default mongoose.model("User", userSchema);
-
-// {
-//   "name": "Abubakar Siddik Zisan",
-//   "email": "zisan@example.com",
-//   "password": "securePassword123",
-//   "role": "user",
-//   "avatar": "https://example.com/avatar.jpg",
-//   "bloodGroup": "O+",
-//   "location": "Dhaka",
-//   "phone": 8801234567890
-// }
