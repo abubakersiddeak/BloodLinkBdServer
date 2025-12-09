@@ -1,6 +1,20 @@
 import BloodDonationRequest from "../models/BloodDonationReq.js";
 import User from "../models/User.js";
 export const createBloodDonationReq = async (req, res) => {
+  const user = await User.findById(req.user.id).select("status");
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: "User not found",
+    });
+  }
+  if (user.status === "blocked") {
+    return res.status(403).json({
+      success: false,
+      message:
+        "Your account is blocked. You cannot create a blood donation request.",
+    });
+  }
   try {
     const {
       recipientName,
