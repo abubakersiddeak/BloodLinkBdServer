@@ -128,17 +128,23 @@ export const totalBloodDonationReq = async (req, res) => {
 export const myBloodDonationReq = async (req, res) => {
   try {
     const { status, page = 1, limit = 10 } = req.query;
-    let query = { requesterId: req.user._id };
+
+    // FIX: Changed req.user._id to req.user.id to match middleware
+    let query = { requesterId: req.user.id };
+
     if (status && status !== "all") {
-      query.status = status;
+      query.donationStatus = status; // Ensure your DB field name matches (donationStatus vs status)
     }
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const total = await BloodDonationRequest.countDocuments(query);
+
     const donations = await BloodDonationRequest.find(query)
       .populate("requesterId", "name avatar email phone")
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
+
     res.json({
       success: true,
       data: donations,
@@ -150,6 +156,7 @@ export const myBloodDonationReq = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("My Donation Req Error:", error); // Added logging to help debug
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -270,6 +277,85 @@ export const getSingleBloodDonationReq = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+export const updateBloodDonationReq = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      recipientName,
+      recipientLocation, // Specific address details
+      hospitalName,
+      fullAddress, // Object: { district, upazila }
+      bloodGroup,
+      donationDate,
+      donationTime,
+      recipientPhone,
+      additionalMessage,
+    } = req.body;
+
+    const request = await BloodDonationRequest.findById(id);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Request not found",
+      });
+    }
+
+    // Check Ownership: Ensure the logged-in user is the one who created the request
+    if (request.requesterId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to edit this request",
+      });
+    }
+
+    // Business Logic: Only allow editing if the request is still "pending"
+    // (You usually can't change patient details if a donor is already on the way)
+    if (request.donationStatus !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Cannot edit a request that is already in progress or completed.",
+      });
+    }
+
+    // Update fields (only if provided in body, otherwise keep existing)
+    if (recipientName) request.recipientName = recipientName;
+    if (recipientLocation) request.recipientLocation = recipientLocation;
+    if (hospitalName) request.hospitalName = hospitalName;
+    if (bloodGroup) request.bloodGroup = bloodGroup;
+    if (donationDate) request.donationDate = donationDate;
+    if (donationTime) request.donationTime = donationTime;
+    if (recipientPhone) request.recipientPhone = recipientPhone;
+
+    // Handle optional field explicitly (allow clearing it)
+    if (additionalMessage !== undefined)
+      request.additionalMessage = additionalMessage;
+
+    // Handle nested object update (fullAddress)
+    if (fullAddress) {
+      request.fullAddress = {
+        district: fullAddress.district || request.fullAddress.district,
+        upazila: fullAddress.upazila || request.fullAddress.upazila,
+      };
+    }
+
+    const updatedRequest = await request.save();
+
+    res.json({
+      success: true,
+      message: "Request updated successfully",
+      data: updatedRequest,
+    });
+  } catch (error) {
+    console.error("Update Request Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while updating request",
+      error: error.message,
     });
   }
 };
