@@ -1,4 +1,5 @@
 import BloodDonationRequest from "../models/BloodDonationReq.js";
+import User from "../models/User.js";
 export const createBloodDonationReq = async (req, res) => {
   try {
     const {
@@ -357,5 +358,138 @@ export const updateBloodDonationReq = async (req, res) => {
       message: "Server error while updating request",
       error: error.message,
     });
+  }
+};
+export const donateToRequest = async (req, res) => {
+  try {
+    const { id } = req.params; // The Request ID
+    const donorId = req.user.id; // Logged in user ID
+
+    // 1. Find the request
+    const request = await BloodDonationRequest.findById(id);
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "Blood donation request not found",
+      });
+    }
+
+    // 2. Validation: Check if pending
+    if (request.donationStatus !== "pending") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This request is no longer available (already in progress or cancelled).",
+      });
+    }
+
+    // 3. Validation: Prevent donating to self
+    if (request.requesterId.toString() === donorId) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot donate to your own request.",
+      });
+    }
+
+    // 4. Update the Request (Status & Donor ID)
+    request.donationStatus = "in-progress";
+    request.donorId = donorId;
+    await request.save();
+
+    // 5. Create History Object for User Model
+    // Note: User Schema expects date as Date object, but Request has date as String.
+    // We try to convert it, or default to Date.now()
+    let historyDate = new Date(request.donationDate);
+    if (isNaN(historyDate.getTime())) {
+      historyDate = new Date(); // Fallback if string parsing fails
+    }
+
+    const historyEntry = {
+      receiver: request.requesterId, // The person who asked for blood
+      date: historyDate,
+      hospital: request.hospitalName,
+      note: `Committed to donate for patient: ${request.recipientName} (${request.bloodGroup})`,
+    };
+
+    // 6. Push to User's Donation History
+    await User.findByIdAndUpdate(
+      donorId,
+      { $push: { donationHistory: historyEntry } },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Thank you! You have successfully accepted this donation request.",
+      data: request,
+    });
+  } catch (error) {
+    console.error("Donate Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while processing donation",
+      error: error.message,
+    });
+  }
+};
+export const totalBloodDonationReqPublic = async (req, res) => {
+  try {
+    const {
+      status,
+      bloodGroup,
+      district,
+      search,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    let query = {};
+
+    if (status && status !== "all") {
+      query.donationStatus = status;
+    }
+
+    // Blood group
+    if (bloodGroup && bloodGroup !== "all") {
+      query.bloodGroup = bloodGroup;
+    }
+
+    // District filter
+    if (district && district !== "all") {
+      query.recipientLocation = { $regex: district, $options: "i" };
+    }
+
+    // Search
+    if (search) {
+      query.$or = [
+        { recipientName: { $regex: search, $options: "i" } },
+        { hospitalName: { $regex: search, $options: "i" } },
+        { recipientPhone: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await BloodDonationRequest.countDocuments(query);
+
+    const donations = await BloodDonationRequest.find(query)
+      .populate("requesterId", "name avatar email phone")
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      data: donations,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
+        limit: parseInt(limit),
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
