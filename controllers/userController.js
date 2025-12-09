@@ -139,3 +139,60 @@ export const updateStatus = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+export const searchDonors = async (req, res) => {
+  try {
+    const { bloodGroup, district, upazila, page = 1, limit = 50 } = req.query;
+
+    let query = {
+      status: "active",
+    };
+
+    // Blood group filter
+    if (bloodGroup) {
+      query.bloodGroup = bloodGroup;
+    }
+
+    // District filter (Mongoose nested query)
+    if (district) {
+      query["location.district"] = {
+        $regex: district,
+        $options: "i",
+      };
+    }
+
+    // Upazila filter
+    if (upazila) {
+      query["location.upazila"] = {
+        $regex: upazila,
+        $options: "i",
+      };
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await User.countDocuments(query);
+
+    const donors = await User.find(query)
+      .select("-password")
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: donors,
+      pagination: {
+        total,
+        page: parseInt(page),
+        pages: Math.ceil(total / parseInt(limit)),
+        limit: parseInt(limit),
+      },
+      searchCriteria: {
+        bloodGroup: bloodGroup || null,
+        district: district || null,
+        upazila: upazila || null,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

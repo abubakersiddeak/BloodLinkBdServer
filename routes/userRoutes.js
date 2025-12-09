@@ -5,11 +5,13 @@ import {
   userUbdate,
   userDelete,
   updateStatus,
+  searchDonors,
 } from "../controllers/userController.js";
 import { verifyToken } from "../middlewares/auth.js";
 import { authorizeRole } from "../middlewares/role.js";
 const router = express.Router();
 router.get("/", users);
+router.get("/search-donors", searchDonors);
 router.get("/:id", user);
 router.patch("/:id/role", verifyToken, authorizeRole("admin"), userUbdate);
 router.delete("/:id", verifyToken, authorizeRole("admin"), userDelete);
