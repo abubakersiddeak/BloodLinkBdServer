@@ -42,8 +42,8 @@ export const signup = async (req, res) => {
     // Set HttpOnly Cookie
     res.cookie("token", token, {
       httpOnly: true,
-      // secure: true,
-      secure: process.env.NODE_ENV === "production", // production এ true
+      secure: true,
+      // secure: process.env.NODE_ENV === "production", // production এ true
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -83,8 +83,8 @@ export const login = async (req, res) => {
     // Set HttpOnly Cookie
     res.cookie("token", token, {
       httpOnly: true,
-      // secure: true,
-      secure: process.env.NODE_ENV === "production", // production এ true
+      secure: true,
+      // secure: process.env.NODE_ENV === "production", // production এ true
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
