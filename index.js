@@ -9,6 +9,7 @@ import userRoutes from "./routes/userRoutes.js";
 import bloodDonationRoute from "./routes/bloodDonationRoute.js";
 import fundRoutes from "./routes/fundRoute.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import statsRoutes from "./routes/statsRoutes.js";
 dotenv.config();
 const PORT = process.env.PORT || 4000;
 connectDB();
@@ -25,6 +26,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/bloodDonationReq", bloodDonationRoute);
 app.use("/api/fund", fundRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/stats", statsRoutes);
 app.get("/", (req, res) => {
   res.send("Hello World");
 });
