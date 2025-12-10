@@ -25,7 +25,7 @@ export const verifyToken = async (req, res, next) => {
 
     req.user = {
       id: decoded.id,
-      role: user.role, // db theke role asbe ...more secure
+      role: user.role,
       email: user.email,
       name: user.name,
     };
