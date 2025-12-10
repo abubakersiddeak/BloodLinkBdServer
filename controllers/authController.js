@@ -44,7 +44,8 @@ export const signup = async (req, res) => {
       httpOnly: true,
       secure: true,
       // secure: process.env.NODE_ENV === "production", // production এ true
-      sameSite: "strict",
+      // sameSite: "strict",
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -85,7 +86,8 @@ export const login = async (req, res) => {
       httpOnly: true,
       secure: true,
       // secure: process.env.NODE_ENV === "production", // production এ true
-      sameSite: "strict",
+      // sameSite: "strict",
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
